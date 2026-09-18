@@ -26,6 +26,7 @@
 
 ## 验证记录
 - 登录系统端到端（`npm run e2e`，headless Chrome + CDP，本地 http://localhost:5188）：10/10 通过——未登录只显示登录页；错误账号、错误密码均被拒；正确凭据进入工作台且 5 个阶段 / 3 个示例 / 9 个服务商预设渲染正常；`macroagent.session.v1` 里无明文密码；刷新后会话保持；点「退出登录」回到登录页且本地会话被清除。
+- 同一套端到端检查对线上地址（https://straughanmerton-cell.github.io/multi-agent-content-studio/）跑通，同样 10/10；对应提交 `8467249`，Pages 工作流 run 35329456965 成功（22s）。
 - 单测 `node --test`：22 项通过（新增 5 项认证测试：SHA-256 标准向量与 55/56/64 分块边界、多字节字符、凭据校验、会话有效期、会话持久化与清除）。纯 JS SHA-256 已与 Node `crypto` 对 12 组样本逐一对齐。
 - 线上站点（https://straughanmerton-cell.github.io/...）：`GET /` 与 `src/*.js`、`assets/styles.css` 均 200；DeepSeek API 对 github.io 源站返回 `Access-Control-Allow-Origin`，页面内「测试连接」返回「连接成功，模型返回：」。
 - 401 `Authentication Fails (governor)` 的准确含义已实测确认：请求**没有携带 Authorization 头**时才返回这句（空 Bearer 报「auth header format should be Bearer sk-...」，错误 Key 报「your api key: ****xxxx is invalid」）。用户 2026-09-18 的截图报错即属此类，Key 本身有效（`/models`、`/user/balance` 均 200，余额 16.83 元）。
