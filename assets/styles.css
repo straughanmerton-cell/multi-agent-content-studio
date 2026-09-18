@@ -356,3 +356,44 @@ select:disabled {
   box-shadow: var(--shadow);
   z-index: 50;
 }
+
+/* ------------------------------------------------------------------ 登录门 */
+
+/* 会话未判定完成前先藏着主界面，避免登录页闪出内容。 */
+body.auth-pending .topbar,
+body.auth-pending .layout,
+body.auth-locked .topbar,
+body.auth-locked .layout {
+  display: none;
+}
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: auto;
+  background:
+    radial-gradient(900px 500px at 8% -10%, var(--bg-glow-a), transparent 60%),
+    radial-gradient(800px 500px at 100% 0%, var(--bg-glow-b), transparent 55%),
+    var(--bg);
+  z-index: 40;
+}
+
+.auth-gate[hidden] { display: none; }
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.auth-card .brand h1 { font-size: 18px; }
+.auth-card .field { margin-top: 2px; }

@@ -5,6 +5,7 @@
 
 const MEMORY_KEY = 'macroagent.memory.v1';
 const SETTINGS_KEY = 'macroagent.settings.v1';
+const SESSION_KEY = 'macroagent.session.v1';
 const MEMORY_LIMIT = 50;
 
 function createDriver() {
@@ -76,6 +77,18 @@ export function loadSettings(fallback = {}) {
 
 export function saveSettings(settings) {
   writeJSON(SETTINGS_KEY, settings);
+}
+
+export function loadSession() {
+  return readJSON(SESSION_KEY, null);
+}
+
+export function saveSession(session) {
+  writeJSON(SESSION_KEY, session);
+}
+
+export function clearSession() {
+  driver.removeItem(SESSION_KEY);
 }
 
 export function newId() {

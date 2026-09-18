@@ -15,10 +15,11 @@
 ## 重要路径
 - `index.html`：单页应用入口。
 - `src/pipeline.js`：Agent 定义 + 五段流水线编排 + SSE 流式解析（可注入 fetch，便于测试）。
-- `src/app.js`：界面交互、流式渲染、导入导出。
+- `src/app.js`：界面交互、流式渲染、导入导出；启动时先过登录门再挂载工作台。
+- `src/auth.js`：登录门（账号常量 + 盐化 SHA-256 哈希 + 会话签发），自带纯 JS SHA-256，不依赖 `crypto.subtle`。
 - `src/providers.js`：服务商预设与配置校验；`src/store.js`：localStorage 持久化。
 - `src/export.js`：导出 Markdown（纯函数，已单测）。
-- `tests/*.test.mjs`：流水线与导出单测；`scripts/dev-server.mjs`：本地预览服务器。
+- `tests/*.test.mjs`：流水线 / 导出 / 认证单测；`scripts/dev-server.mjs`：本地预览服务器；`scripts/e2e-auth-check.mjs`：用本机 Chrome 的 CDP 做登录门端到端检查（`npm run e2e`）。
 - `worker/`：Cloudflare Worker 代理；`.github/workflows/deploy-pages.yml`：Pages 自动部署。
 
 ## 当前约定
@@ -33,3 +34,4 @@
 - 默认服务商：DeepSeek `deepseek-v4-flash`（API 地址 `https://api.deepseek.com/v1`）。
 - 推理模型适配：`delta.reasoning_content`（思考过程）与 `delta.content`（正文）分开渲染，思考过程折叠展示并写入导出文件。
 - Key 策略：浏览器直连，Key 只存在访问者本机 localStorage；公开分享需改用 `worker/` 的 Cloudflare Worker 代理。
+- 访问控制：站点带前端登录门（管理员账号 `18300004073`，见 `src/auth.js`），会话 7 天；这是静态托管的访问门，不是服务端鉴权，密码哈希随页面公开可读。

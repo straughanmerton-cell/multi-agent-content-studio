@@ -11,6 +11,8 @@
 - 设置面板的 Base URL / 模型名占位符写死成 OpenAI 的示例值（`https://api.openai.com/v1`、`gpt-4o-mini`），选择 DeepSeek 时会误导；现已改为跟随当前服务商显示预设值，并在留空时提示会使用默认值。
 
 ## 风险记录
+- **前端登录门不是真鉴权**：静态站点没有服务端，`src/auth.js` 里的账号与密码哈希随页面公开，6 位数字口令的哈希可被瞬间爆破，懂技术的人也能绕过登录门直接调用模型接口。它只能挡随手访问与爬虫。需要真正保护时：用 Cloudflare Access 保护 Pages 项目，或把校验放进 Worker（方案 B）。已在 README「登录系统」一节与登录卡片上向用户说明。
+- 应用内浏览器（Codex 内置）本轮持续报 `Codex auth token is unavailable`，界面验证改用本机 headless Chrome + CDP（`scripts/e2e-auth-check.mjs`）完成。
 - API Key 存在浏览器 localStorage：同一台电脑的其他使用者可读取。影响范围=公开分享的部署；处理方式=文档引导使用 Worker 代理，并设置 ACCESS_TOKEN 与 ALLOWED_ORIGIN。
 - 一次生成会调用 5 次模型（含流式），Token 消耗约为单次对话的 5 倍；推理模型的思考内容同样计入输出 token。
 - 上游 Research Agent 无真实数据源，调研结论可能过时；提示词已要求无法核实的数字标注「需核实」。
@@ -26,3 +28,4 @@
 
 ## 待确认
 - 用户是否需要公开分享该站点（决定是否部署 Worker 代理隐藏 Key）。
+- 登录门是否需要升级为服务端鉴权（Cloudflare Access / Worker）；当前为前端门，用户尚未表态。

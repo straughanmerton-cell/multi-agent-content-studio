@@ -15,12 +15,21 @@ import {
 import { renderMarkdown } from './markdown.js';
 import { buildExportFilename, buildExportMarkdown } from './export.js';
 import {
+  ADMIN_USER,
+  createSession,
+  isSessionValid,
+  verifyCredentials,
+} from './auth.js';
+import {
   addMemoryEntry,
+  clearSession,
   clearMemory,
   loadMemory,
+  loadSession,
   loadSettings,
   newId,
   removeMemoryEntry,
+  saveSession,
   saveSettings,
 } from './store.js';
 
@@ -57,6 +66,13 @@ const STATUS_TEXT = {
 const el = (id) => document.getElementById(id);
 
 const dom = {
+  authGate: el('auth-gate'),
+  authForm: el('auth-form'),
+  authUser: el('auth-user'),
+  authPass: el('auth-pass'),
+  authStatus: el('auth-status'),
+  loginBtn: el('btn-login'),
+  logoutBtn: el('btn-logout'),
   task: el('task-input'),
   examples: el('example-row'),
   run: el('btn-run'),
@@ -94,8 +110,76 @@ let controller = null;
 let lastResult = null;
 let lastTask = '';
 let stageViews = new Map();
+let appMounted = false;
 
-init();
+boot();
+
+/* ------------------------------------------------------------------ 启动与登录 */
+
+function boot() {
+  const session = loadSession();
+  if (isSessionValid(session)) {
+    mountApp();
+    return;
+  }
+  clearSession();
+  showAuthGate();
+}
+
+function showAuthGate() {
+  document.body.classList.remove('auth-pending');
+  document.body.classList.add('auth-locked');
+  dom.authGate.hidden = false;
+  dom.authForm.addEventListener('submit', handleLogin);
+  dom.authUser.focus();
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const user = dom.authUser.value.trim();
+  const password = dom.authPass.value;
+
+  dom.loginBtn.disabled = true;
+  setAuthStatus('');
+
+  let ok = false;
+  try {
+    ok = verifyCredentials(user, password);
+  } finally {
+    dom.loginBtn.disabled = false;
+  }
+
+  if (!ok) {
+    dom.authPass.value = '';
+    setAuthStatus('账号或密码不正确，请重新输入。', 'error');
+    dom.authPass.focus();
+    return;
+  }
+
+  saveSession(createSession(ADMIN_USER));
+  dom.authPass.value = '';
+  mountApp();
+}
+
+function setAuthStatus(text, tone = '') {
+  dom.authStatus.textContent = text;
+  dom.authStatus.className = tone ? `status-line ${tone}` : 'status-line';
+}
+
+function mountApp() {
+  if (appMounted) return;
+  appMounted = true;
+  document.body.classList.remove('auth-pending', 'auth-locked');
+  dom.authGate.hidden = true;
+  dom.authForm.removeEventListener('submit', handleLogin);
+  init();
+}
+
+function logout() {
+  clearSession();
+  if (controller) controller.abort();
+  location.reload();
+}
 
 function init() {
   renderExamples();
@@ -110,6 +194,7 @@ function init() {
 /* ------------------------------------------------------------------ 事件绑定 */
 
 function bindEvents() {
+  dom.logoutBtn.addEventListener('click', logout);
   dom.run.addEventListener('click', () => startRun());
   dom.stop.addEventListener('click', () => controller?.abort());
   dom.clearTask.addEventListener('click', () => {
