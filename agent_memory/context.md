@@ -25,3 +25,11 @@
 - 默认使用中文记录。
 - 只保留当前有效信息，过期内容归档到 `agent_memory/archive/`。
 - 上游代码仅作参考，克隆在 `upstream-agent/`（已加入 .gitignore，不参与部署）。
+
+## 部署现状
+- 线上地址：<https://straughanmerton-cell.github.io/multi-agent-content-studio/>
+- 代码仓库：<https://github.com/straughanmerton-cell/multi-agent-content-studio>（public，仅代码，不含任何 Key）
+- 托管方式：GitHub Pages + `.github/workflows/deploy-pages.yml`，推送到 `main` 即自动发布。
+- 默认服务商：DeepSeek `deepseek-v4-flash`（API 地址 `https://api.deepseek.com/v1`）。
+- 推理模型适配：`delta.reasoning_content`（思考过程）与 `delta.content`（正文）分开渲染，思考过程折叠展示并写入导出文件。
+- Key 策略：浏览器直连，Key 只存在访问者本机 localStorage；公开分享需改用 `worker/` 的 Cloudflare Worker 代理。
