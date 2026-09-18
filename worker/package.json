@@ -1,0 +1,14 @@
+{
+  "name": "multi-agent-content-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker 代理：为网页版隐藏 API Key 并转发流式响应。",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

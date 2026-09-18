@@ -1,0 +1,14 @@
+{
+  "name": "multi-agent-content-studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "基于 Multi-Agent 协同的内容生产系统网页版：规划、调研、创作、审核、优化五段流水线，可静态免费部署。",
+  "scripts": {
+    "test": "node --test",
+    "dev": "node scripts/dev-server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

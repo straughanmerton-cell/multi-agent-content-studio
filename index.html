@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>多 Agent 内容生产工作台</title>
+  <meta name="description" content="基于 Multi-Agent 协同的智能内容生产系统网页版：规划、调研、创作、审核、优化五段流水线，一键产出短视频脚本与营销文案。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A4%96%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo">🤖</span>
+      <div>
+        <h1>多 Agent 内容生产工作台</h1>
+        <p class="brand-sub">规划 · 调研 · 创作 · 审核 · 优化，一条流水线跑完</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="provider-badge" class="chip chip-muted">演示模式</span>
+      <button type="button" id="btn-export" class="btn btn-ghost" disabled>导出 Markdown</button>
+      <button type="button" id="btn-settings" class="btn btn-ghost">⚙ 设置</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="column column-left">
+      <section class="card">
+        <div class="card-head">
+          <h2>需求描述</h2>
+          <span class="hint">Ctrl / ⌘ + Enter 可直接运行</span>
+        </div>
+        <textarea id="task-input" rows="7" placeholder="描述你要产出的内容，例如：为一款 AI 绘画工具制定完整的小红书增长方案，包括用户画像分析、竞品调研、爆款内容策划、转化路径设计。"></textarea>
+        <div class="example-row" id="example-row"></div>
+        <div class="run-row">
+          <button type="button" id="btn-run" class="btn btn-primary">开始生成</button>
+          <button type="button" id="btn-stop" class="btn btn-ghost" hidden>停止</button>
+          <button type="button" id="btn-clear-task" class="btn btn-text">清空</button>
+        </div>
+        <p class="status-line" id="run-status"></p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>历史记忆</h2>
+          <button type="button" id="btn-clear-memory" class="btn btn-text">清空</button>
+        </div>
+        <p class="hint">每次运行的终稿会沉淀在这里，下一次生成时自动作为「历史经验」带入规划阶段。</p>
+        <ul class="memory-list" id="memory-list"></ul>
+      </section>
+    </div>
+
+    <div class="column column-right">
+      <section class="card">
+        <div class="card-head">
+          <h2>执行流水线</h2>
+          <span class="hint" id="pipeline-status">等待开始</span>
+        </div>
+        <ol class="stage-list" id="stage-list"></ol>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>最终输出</h2>
+          <div class="card-actions">
+            <button type="button" id="btn-copy-final" class="btn btn-text" disabled>复制</button>
+            <button type="button" id="btn-scroll-final" class="btn btn-text" hidden>查看</button>
+          </div>
+        </div>
+        <div class="markdown final-output" id="final-output">
+          <p class="placeholder">终稿会显示在这里。没有 API Key 也可以先用「演示模式」跑通完整流程。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="settings-dialog" class="dialog">
+    <form method="dialog" class="dialog-form">
+      <div class="card-head">
+        <h2>模型设置</h2>
+        <button type="button" id="btn-close-settings" class="btn btn-text">关闭</button>
+      </div>
+
+      <label class="field">
+        <span>服务商</span>
+        <select id="field-provider"></select>
+      </label>
+
+      <label class="field">
+        <span>API 地址（Base URL）</span>
+        <input type="text" id="field-base-url" placeholder="https://api.openai.com/v1" autocomplete="off" />
+      </label>
+
+      <label class="field">
+        <span>模型名称</span>
+        <input type="text" id="field-model" placeholder="gpt-4o-mini" autocomplete="off" />
+      </label>
+
+      <label class="field">
+        <span>API Key</span>
+        <input type="password" id="field-api-key" placeholder="sk-..." autocomplete="off" />
+      </label>
+
+      <label class="field">
+        <span>带入的历史记录条数</span>
+        <input type="number" id="field-memory-limit" min="0" max="10" step="1" />
+      </label>
+
+      <p class="hint" id="provider-hint"></p>
+      <p class="hint warn" id="key-warning" hidden>
+        ⚠️ API Key 保存在本机浏览器（localStorage），仅适合个人使用。公开部署建议改用仓库中的 Cloudflare Worker 代理，把 Key 放在服务端。
+      </p>
+
+      <div class="dialog-actions">
+        <button type="button" id="btn-test" class="btn btn-ghost">测试连接</button>
+        <button type="button" id="btn-save-settings" class="btn btn-primary">保存</button>
+      </div>
+      <p class="status-line" id="settings-status"></p>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
