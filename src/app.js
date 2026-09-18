@@ -543,19 +543,23 @@ function collectSettingsForm() {
 /** 把设置面板里未保存的改动采纳下来，返回是否发生了变更。 */
 function syncUnsavedSettings() {
   const form = collectSettingsForm();
-  const changed =
-    form.provider !== settings.provider ||
-    form.baseUrl !== settings.baseUrl ||
-    form.model !== settings.model ||
-    form.apiKey !== settings.apiKey ||
-    Number(form.memoryLimit) !== Number(settings.memoryLimit);
-  if (!changed) return false;
+  if (!hasUnsavedChanges(form)) return false;
 
   settings = { ...settings, ...form };
   saveSettings(settings);
   renderProviderBadge();
   updateProviderHint();
   return true;
+}
+
+function hasUnsavedChanges(form) {
+  return (
+    form.provider !== settings.provider ||
+    form.baseUrl !== settings.baseUrl ||
+    form.model !== settings.model ||
+    form.apiKey !== settings.apiKey ||
+    Number(form.memoryLimit) !== Number(settings.memoryLimit)
+  );
 }
 
 function updateProviderHint() {
@@ -569,9 +573,18 @@ function updateProviderHint() {
   }
 
   const baseUrl = dom.fieldBaseUrl.value.trim() || preset.baseUrl;
+
+  // 占位符跟着当前服务商走，避免选了 DeepSeek 却看到 OpenAI 的示例地址，
+  // 让人误以为这两项必须手填。
+  dom.fieldBaseUrl.placeholder = preset.baseUrl || 'https://api.example.com/v1';
+  dom.fieldModel.placeholder = preset.model || '模型名称';
+
   const parts = [];
   if (preset.keyHint) parts.push(`Key 格式：${preset.keyHint}`);
   if (preset.docs) parts.push(`申请地址：${preset.docs}`);
+  if (!isDemo && preset.baseUrl && (!dom.fieldBaseUrl.value.trim() || !dom.fieldModel.value.trim())) {
+    parts.push('留空的地址或模型会使用服务商默认值');
+  }
   if (!isDemo && detectProxy(baseUrl)) {
     parts.push('检测到代理地址，Key 由服务端持有，浏览器端可留空。');
   }
@@ -607,7 +620,12 @@ async function testConnection() {
         { role: 'user', content: '只回复两个字：正常' },
       ],
     });
-    setStatus(dom.settingsStatus, `连接成功，模型返回：${truncate(reply.trim(), 40)}`, 'ok');
+    const unsavedTip = hasUnsavedChanges(draft) ? '（改动还没保存，点「保存」后生成时才生效）' : '';
+    setStatus(
+      dom.settingsStatus,
+      `连接成功，模型返回：${truncate(reply.trim(), 40)}${unsavedTip}`,
+      'ok',
+    );
   } catch (error) {
     setStatus(dom.settingsStatus, `连接失败：${error.message}`, 'error');
   } finally {
