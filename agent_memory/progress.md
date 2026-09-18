@@ -22,7 +22,8 @@
 - 换浏览器/换设备访问时，需在「设置」里重新粘贴一次 Key（各浏览器 localStorage 独立）。
 
 ## 验证记录
-- `node --test`：16 项通过（含推理内容分流到 `stage:reasoning`、SSE 分片重组、中断、演示模式、配置校验、导出内容与文件名）。
+- 401 `Authentication Fails (governor)` 的准确含义已实测确认：请求**没有携带 Authorization 头**时才返回这句（空 Bearer 报「auth header format should be Bearer sk-...」，错误 Key 报「your api key: ****xxxx is invalid」）。用户 2026-09-18 的截图报错即属此类，Key 本身有效（`/models`、`/user/balance` 均 200，余额 16.83 元）。
+- `node --test`：17 项通过（含推理内容分流到 `stage:reasoning`、SSE 分片重组、中断、演示模式、配置校验、导出内容与文件名、未携带 Key 的 401 提示）。
 - 真实 DeepSeek 调用（本机 http://localhost:5188，真实 Key）：五段流水线全部跑通，总耗时 161.4s，终稿渲染完成并写入历史记忆，思考过程在 4/5 阶段独立显示。
 - 线上站点（https://straughanmerton-cell.github.io/...）：`GET /` 与 `src/*.js`、`assets/styles.css` 均 200；DeepSeek API 对 github.io 源站返回 `Access-Control-Allow-Origin`，页面内「测试连接」返回「连接成功，模型返回：」。
 - 未验证：导出下载（应用内浏览器拦截 `download` 事件），下载以外的生成逻辑已由单测覆盖；移动端真机布局未验证。
