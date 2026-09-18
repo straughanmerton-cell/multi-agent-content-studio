@@ -358,6 +358,10 @@ async function startRun() {
     return;
   }
 
+  // 设置面板里改了但没点「保存」时先把表单值采纳并持久化，
+  // 否则会拿旧配置发请求（症状：Key 明明填了，请求却没带 Authorization）。
+  syncUnsavedSettings();
+
   let config;
   try {
     config = resolveConfig(settings);
@@ -534,6 +538,24 @@ function collectSettingsForm() {
     apiKey: dom.fieldApiKey.value.trim(),
     memoryLimit: clamp(Number(dom.fieldMemoryLimit.value) || 0, 0, 10),
   };
+}
+
+/** 把设置面板里未保存的改动采纳下来，返回是否发生了变更。 */
+function syncUnsavedSettings() {
+  const form = collectSettingsForm();
+  const changed =
+    form.provider !== settings.provider ||
+    form.baseUrl !== settings.baseUrl ||
+    form.model !== settings.model ||
+    form.apiKey !== settings.apiKey ||
+    Number(form.memoryLimit) !== Number(settings.memoryLimit);
+  if (!changed) return false;
+
+  settings = { ...settings, ...form };
+  saveSettings(settings);
+  renderProviderBadge();
+  updateProviderHint();
+  return true;
 }
 
 function updateProviderHint() {

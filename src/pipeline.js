@@ -190,7 +190,7 @@ export async function streamChatCompletion({
 
   if (!response.ok) {
     const detail = await safeReadText(response);
-    throw new Error(formatHttpError(response.status, detail));
+    throw new Error(formatHttpError(response.status, detail, { hasKey: Boolean(apiKey) }));
   }
 
   const contentType = response.headers?.get?.('content-type') || '';
@@ -279,7 +279,7 @@ async function safeReadText(response) {
   }
 }
 
-function formatHttpError(status, detail) {
+function formatHttpError(status, detail, { hasKey = true } = {}) {
   let message = `接口返回 ${status}`;
   if (detail) {
     try {
@@ -291,7 +291,13 @@ function formatHttpError(status, detail) {
       message += `：${detail.slice(0, 300)}`;
     }
   }
-  if (status === 401 || status === 403) message += '（请检查 API Key 是否有效）';
+  if (status === 401 || status === 403) {
+    // 没带 Key 时的 401 长得像「Key 无效」，实际原因是 Key 根本没填/没保存，
+    // 这里把两种情况的提示分开，避免用户反复换 Key。
+    message += hasKey
+      ? '（请检查 API Key 是否有效）'
+      : '（请求未携带 API Key：请点右上角「设置」填入 Key 并点「保存」）';
+  }
   if (status === 404) message += '（请检查 API 地址与模型名是否正确）';
   return message;
 }

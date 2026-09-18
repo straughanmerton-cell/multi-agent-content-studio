@@ -180,6 +180,28 @@ test('streamChatCompletion 把 HTTP 错误转成可读提示', async () => {
   );
 });
 
+test('未携带 API Key 时的 401 提示指向「设置」而不是让用户换 Key', async () => {
+  let sentAuthHeader = 'not-called';
+  await assert.rejects(
+    () =>
+      streamChatCompletion({
+        baseUrl: 'https://api.deepseek.com/v1',
+        apiKey: '',
+        model: 'deepseek-v4-flash',
+        messages: [],
+        fetchImpl: async (_url, init) => {
+          sentAuthHeader = init.headers.Authorization;
+          return new Response('Authentication Fails (governor)', {
+            status: 401,
+            headers: { 'Content-Type': 'text/plain' },
+          });
+        },
+      }),
+    /请求未携带 API Key：请点右上角「设置」填入 Key 并点「保存」/,
+  );
+  assert.equal(sentAuthHeader, undefined);
+});
+
 test('runPipeline 按 5 个步骤串行执行并正确传递上下文', async () => {
   const replies = ['【计划】A', '【调研】B', '【初稿】C', '【审核】D', '【终稿】E'];
   const { fetchImpl, calls } = collectingFetch(replies);
