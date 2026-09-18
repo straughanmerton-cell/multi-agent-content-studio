@@ -20,6 +20,7 @@
 ## 下一步
 - 若公开分享，按 README 部署 Worker 代理并设置 ACCESS_TOKEN / ALLOWED_ORIGIN。
 - 换浏览器/换设备访问时，需在「设置」里重新粘贴一次 Key（各浏览器 localStorage 独立）。
+- 注意 `http://localhost:5188` 与 `https://straughanmerton-cell.github.io/...` 是两个不同源，localStorage 不互通，Key 需分别保存一次。
 
 ## 验证记录
 - 401 `Authentication Fails (governor)` 的准确含义已实测确认：请求**没有携带 Authorization 头**时才返回这句（空 Bearer 报「auth header format should be Bearer sk-...」，错误 Key 报「your api key: ****xxxx is invalid」）。用户 2026-09-18 的截图报错即属此类，Key 本身有效（`/models`、`/user/balance` 均 200，余额 16.83 元）。
@@ -27,3 +28,4 @@
 - 真实 DeepSeek 调用（本机 http://localhost:5188，真实 Key）：五段流水线全部跑通，总耗时 161.4s，终稿渲染完成并写入历史记忆，思考过程在 4/5 阶段独立显示。
 - 线上站点（https://straughanmerton-cell.github.io/...）：`GET /` 与 `src/*.js`、`assets/styles.css` 均 200；DeepSeek API 对 github.io 源站返回 `Access-Control-Allow-Origin`，页面内「测试连接」返回「连接成功，模型返回：」。
 - 未验证：导出下载（应用内浏览器拦截 `download` 事件），下载以外的生成逻辑已由单测覆盖；移动端真机布局未验证。
+- 未验证：本轮设置面板占位符与「未保存」提示的改动仅通过 `node --check` 与单测（17 项）验证，应用内浏览器本轮不可用，未做界面实测。

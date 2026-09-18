@@ -7,6 +7,8 @@
 ## 已修复
 - 401 提示误导：未填/未保存 API Key 时请求不带 Authorization，DeepSeek 返回纯文本 `Authentication Fails (governor)`，旧提示统一写成「请检查 API Key 是否有效」，会让人反复换 Key。现已按是否真的带了 Key 区分提示，未带 Key 时提示去「设置」填写并保存（commit 14839e8）。
 - 设置面板改了 Key 却没点「保存」会被静默忽略，直接用旧配置发请求。现在点击「开始生成」会先采纳并持久化表单里的未保存改动。
+- 「测试连接」用的是表单草稿值，成功后没有提示需要保存，用户容易以为已经生效（这正是 401 的实际触发路径）。现在测试成功后会附带「改动还没保存」提示。
+- 设置面板的 Base URL / 模型名占位符写死成 OpenAI 的示例值（`https://api.openai.com/v1`、`gpt-4o-mini`），选择 DeepSeek 时会误导；现已改为跟随当前服务商显示预设值，并在留空时提示会使用默认值。
 
 ## 风险记录
 - API Key 存在浏览器 localStorage：同一台电脑的其他使用者可读取。影响范围=公开分享的部署；处理方式=文档引导使用 Worker 代理，并设置 ACCESS_TOKEN 与 ALLOWED_ORIGIN。
