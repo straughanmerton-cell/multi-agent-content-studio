@@ -26,7 +26,7 @@ export const PROVIDERS = [
     id: 'deepseek',
     label: 'DeepSeek 深度求索',
     baseUrl: 'https://api.deepseek.com/v1',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     keyHint: 'sk-...',
     docs: 'https://platform.deepseek.com/api_keys',
   },
@@ -80,7 +80,8 @@ export const PROVIDERS = [
   },
 ];
 
-export const DEFAULT_PROVIDER = 'demo';
+/** 默认服务商：开箱即可用真实模型，未填 Key 时界面会给出提示。 */
+export const DEFAULT_PROVIDER = 'deepseek';
 
 export function getProvider(id) {
   return PROVIDERS.find((item) => item.id === id) || PROVIDERS[PROVIDERS.length - 1];

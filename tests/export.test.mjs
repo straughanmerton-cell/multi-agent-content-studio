@@ -39,3 +39,19 @@ test('buildExportFilename 生成文件名且不含非法字符', () => {
   assert.equal(filename, '多agent内容方案-20260918-090503.md');
   assert.ok(!/[:\\/*?"<>|]/.test(filename));
 });
+
+test('buildExportMarkdown 把思考过程放进折叠块，且不干扰正文', () => {
+  const markdown = buildExportMarkdown({
+    task: '任务',
+    generatedAt: FIXED_DATE,
+    stages: [{ name: '🧠 Planner', text: '【计划】正文', reasoning: '先想一下' }],
+    final: '终稿',
+  });
+  assert.ok(markdown.includes('<details><summary>思考过程</summary>\n\n先想一下\n\n</details>'));
+  assert.ok(markdown.indexOf('【计划】正文') < markdown.indexOf('<details>'));
+
+  const withoutReasoning = buildExportMarkdown({
+    stages: [{ name: '🧠 Planner', text: '只有正文' }],
+  });
+  assert.ok(!withoutReasoning.includes('<details>'));
+});

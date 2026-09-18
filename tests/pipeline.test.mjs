@@ -6,6 +6,7 @@ import {
   MEMORY_EMPTY_HINT,
   STEPS,
   buildMemoryContext,
+  extractDeltaFromEvent,
   runPipeline,
   streamChatCompletion,
 } from '../src/pipeline.js';
@@ -109,6 +110,60 @@ test('streamChatCompletion 兼容非流式的 JSON 响应', async () => {
       }),
   });
   assert.equal(text, '一次性返回');
+});
+
+test('extractDeltaFromEvent 区分正文与推理模型的思考内容', () => {
+  const reasoning = extractDeltaFromEvent(
+    'data: {"choices":[{"delta":{"content":null,"reasoning_content":"先想一下"}}]}',
+  );
+  assert.deepEqual(reasoning, { content: '', reasoning: '先想一下' });
+
+  const answer = extractDeltaFromEvent('data: {"choices":[{"delta":{"content":"正文"}}]}');
+  assert.deepEqual(answer, { content: '正文', reasoning: '' });
+
+  assert.deepEqual(extractDeltaFromEvent('data: [DONE]'), { content: '', reasoning: '' });
+  assert.deepEqual(extractDeltaFromEvent(': keep-alive'), { content: '', reasoning: '' });
+});
+
+test('推理模型：思考内容经 stage:reasoning 单独回传，不混入正文', async () => {
+  const encoder = new TextEncoder();
+  const frames = [
+    { delta: { content: null, reasoning_content: '我需要先拆解需求。' } },
+    { delta: { content: null, reasoning_content: '然后给出结论。' } },
+    { delta: { content: '【计划】' } },
+    { delta: { content: '先定人群。' } },
+  ]
+    .map((payload) => `data: ${JSON.stringify({ choices: [payload] })}\n\n`)
+    .concat('data: [DONE]\n\n')
+    .join('');
+
+  const fetchImpl = async () =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(frames));
+          controller.close();
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+    );
+
+  const events = [];
+  const { stages } = await runPipeline({
+    task: '测试推理输出',
+    config: CONFIG,
+    fetchImpl: async (url, init) => {
+      const step = events.filter((e) => e === 'stage:start').length;
+      if (step > 1) return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return fetchImpl(url, init);
+    },
+    onEvent: (event) => events.push(event.type === 'stage:reasoning' ? 'stage:reasoning' : event.type),
+  });
+
+  assert.ok(events.includes('stage:reasoning'));
+  assert.equal(stages[0].reasoning, '我需要先拆解需求。然后给出结论。');
+  assert.equal(stages[0].output, '【计划】先定人群。');
+  assert.ok(!stages[0].output.includes('拆解需求'));
 });
 
 test('streamChatCompletion 把 HTTP 错误转成可读提示', async () => {
@@ -244,6 +299,6 @@ test('resolveConfig 校验必填项并读取服务商预设', () => {
   );
   const deepseek = resolveConfig({ provider: 'deepseek', apiKey: 'k' });
   assert.equal(deepseek.baseUrl, 'https://api.deepseek.com/v1');
-  assert.equal(deepseek.model, 'deepseek-chat');
+  assert.equal(deepseek.model, 'deepseek-v4-flash');
   assert.equal(resolveConfig({ provider: 'demo' }).provider, 'demo');
 });

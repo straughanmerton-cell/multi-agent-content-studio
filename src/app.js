@@ -232,23 +232,44 @@ function renderStageSkeleton() {
 
     const body = document.createElement('div');
     body.className = 'stage-body';
+
+    // 推理模型（如 DeepSeek v4）会先输出思考内容，单独折叠展示，不干扰正式结果。
+    const reasoning = document.createElement('details');
+    reasoning.className = 'reasoning';
+    reasoning.hidden = true;
+    reasoning.open = true;
+    const reasoningSummary = document.createElement('summary');
+    reasoningSummary.textContent = '思考过程';
+    const reasoningText = document.createElement('div');
+    reasoningText.className = 'reasoning-text';
+    reasoning.append(reasoningSummary, reasoningText);
+    reasoningSummary.addEventListener('click', () => {
+      view.reasoningTouched = true;
+    });
+
     const markdown = document.createElement('div');
     markdown.className = 'markdown';
     markdown.innerHTML = `<p class="placeholder">${meta.description}</p>`;
-    body.appendChild(markdown);
+    body.append(reasoning, markdown);
 
     head.addEventListener('click', () => li.classList.toggle('collapsed'));
 
     li.append(head, body);
     dom.stageList.appendChild(li);
-    stageViews.set(meta.id, {
+    const view = {
       root: li,
       status: head.querySelector('.stage-status'),
       time: head.querySelector('.stage-time'),
+      reasoning,
+      reasoningText,
+      reasoningPending: '',
+      reasoningFrame: 0,
+      reasoningTouched: false,
       markdown,
       pending: '',
       frame: 0,
-    });
+    };
+    stageViews.set(meta.id, view);
   }
 }
 
@@ -372,6 +393,8 @@ async function startRun() {
           dom.pipelineStatus.textContent = `进行中 ${finished + 1}/${STEPS.length} · ${event.step.label}`;
         } else if (event.type === 'stage:delta') {
           renderStageDelta(event.step.id, event.text);
+        } else if (event.type === 'stage:reasoning') {
+          renderStageReasoning(event.step.id, event.text);
         } else if (event.type === 'stage:done') {
           finished += 1;
           const view = stageViews.get(event.step.id);
@@ -438,6 +461,12 @@ async function startRun() {
 function renderStageDelta(stepId, text, immediate = false) {
   const view = stageViews.get(stepId);
   if (!view) return;
+
+  // 正文开始输出后收起思考过程，需要回看时可以手动展开。
+  if (view.reasoning && !view.reasoning.hidden && !view.reasoningTouched) {
+    view.reasoning.open = false;
+  }
+
   view.pending = text;
   view.markdown.classList.add('streaming');
 
@@ -456,13 +485,33 @@ function renderStageDelta(stepId, text, immediate = false) {
   if (!view.frame) view.frame = requestAnimationFrame(draw);
 }
 
+function renderStageReasoning(stepId, text) {
+  const view = stageViews.get(stepId);
+  if (!view) return;
+  view.reasoning.hidden = false;
+  view.reasoningPending = text;
+
+  const draw = () => {
+    view.reasoningFrame = 0;
+    view.reasoningText.textContent = view.reasoningPending;
+    view.reasoningText.scrollTop = view.reasoningText.scrollHeight;
+  };
+  if (!view.reasoningFrame) view.reasoningFrame = requestAnimationFrame(draw);
+}
+
 function setRunning(running) {
   dom.run.disabled = running;
   dom.stop.hidden = !running;
   dom.run.textContent = running ? '生成中…' : '开始生成';
   if (running) {
     dom.pipelineStatus.textContent = '准备中…';
-    setStatus(dom.runStatus, '正在调用模型，请等待当前步骤完成…');
+    const missingKey = settings.provider !== 'demo' && !settings.apiKey;
+    setStatus(
+      dom.runStatus,
+      missingKey
+        ? '未填写 API Key，将直接调用接口（本地模型或代理可忽略此提示）。'
+        : '正在调用模型，请等待当前步骤完成…',
+    );
   }
 }
 
@@ -557,6 +606,7 @@ function exportPayload() {
   const stages = [...dom.stageList.children].map((view) => ({
     name: view.querySelector('.stage-name')?.textContent || '未命名步骤',
     text: view.querySelector('.stage-body .markdown')?.innerText || '',
+    reasoning: view.querySelector('.reasoning-text')?.textContent || '',
   }));
   return buildExportMarkdown({
     task: lastTask || dom.task.value.trim(),

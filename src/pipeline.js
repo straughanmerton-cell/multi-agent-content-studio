@@ -165,6 +165,7 @@ export async function streamChatCompletion({
   signal,
   extraHeaders = {},
   onDelta = () => {},
+  onReasoningDelta = () => {},
   maxTokens,
 }) {
   const endpoint = `${String(baseUrl).replace(/\/+$/, '')}/chat/completions`;
@@ -195,7 +196,9 @@ export async function streamChatCompletion({
   const contentType = response.headers?.get?.('content-type') || '';
   if (!response.body || contentType.includes('application/json')) {
     const payload = await response.json().catch(() => null);
-    const text = payload?.choices?.[0]?.message?.content ?? '';
+    const message = payload?.choices?.[0]?.message;
+    const text = message?.content ?? '';
+    if (message?.reasoning_content) onReasoningDelta(message.reasoning_content);
     if (text) onDelta(text);
     return text;
   }
@@ -214,27 +217,36 @@ export async function streamChatCompletion({
     const events = buffer.split(/\r?\n\r?\n/);
     buffer = events.pop() ?? '';
     for (const event of events) {
-      const delta = extractDeltaFromEvent(event);
-      if (delta) {
-        full += delta;
-        onDelta(delta);
+      const { content, reasoning } = extractDeltaFromEvent(event);
+      if (content) {
+        full += content;
+        onDelta(content);
       }
+      if (reasoning) onReasoningDelta(reasoning);
     }
   }
 
   if (buffer.trim()) {
-    const delta = extractDeltaFromEvent(buffer);
-    if (delta) {
-      full += delta;
-      onDelta(delta);
+    const { content, reasoning } = extractDeltaFromEvent(buffer);
+    if (content) {
+      full += content;
+      onDelta(content);
     }
+    if (reasoning) onReasoningDelta(reasoning);
   }
 
   return full;
 }
 
-function extractDeltaFromEvent(event) {
-  let text = '';
+/**
+ * 解析一条 SSE 事件。
+ *
+ * 推理模型（DeepSeek v4 系列等）会把思考内容放在 delta.reasoning_content，
+ * 正式回答放在 delta.content；两者要分开处理，否则思考阶段界面会一直空白。
+ */
+export function extractDeltaFromEvent(event) {
+  let content = '';
+  let reasoning = '';
   for (const rawLine of event.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line.startsWith('data:')) continue;
@@ -248,12 +260,15 @@ function extractDeltaFromEvent(event) {
         choice?.message?.content ??
         choice?.text ??
         '';
-      if (typeof delta === 'string') text += delta;
+      if (typeof delta === 'string') content += delta;
+
+      const thinking = choice?.delta?.reasoning_content ?? choice?.message?.reasoning_content;
+      if (typeof thinking === 'string') reasoning += thinking;
     } catch {
       // 忽略无法解析的心跳或注释行。
     }
   }
-  return text;
+  return { content, reasoning };
 }
 
 async function safeReadText(response) {
@@ -316,7 +331,7 @@ export async function runPipeline({
     const meta = describeStep(step);
     const input = step.buildInput({ ...context, plan, research, draft, review });
     const startedAt = Date.now();
-    const record = { ...meta, input, output: '' };
+    const record = { ...meta, input, output: '', reasoning: '' };
     stages.push(record);
     onEvent({ type: 'stage:start', step: meta });
 
@@ -334,6 +349,10 @@ export async function runPipeline({
       onDelta: (delta) => {
         record.output += delta;
         onEvent({ type: 'stage:delta', step: meta, delta, text: record.output });
+      },
+      onReasoningDelta: (delta) => {
+        record.reasoning += delta;
+        onEvent({ type: 'stage:reasoning', step: meta, delta, text: record.reasoning });
       },
     });
 
@@ -353,7 +372,7 @@ export async function runPipeline({
   return { final, stages };
 }
 
-async function runStep({ messages, step, config, fetchImpl, signal, onDelta }) {
+async function runStep({ messages, step, config, fetchImpl, signal, onDelta, onReasoningDelta }) {
   if (config?.provider === 'demo') {
     return runDemoStep({ step, messages, onDelta, signal });
   }
@@ -367,6 +386,7 @@ async function runStep({ messages, step, config, fetchImpl, signal, onDelta }) {
     signal,
     extraHeaders: config.extraHeaders || {},
     onDelta,
+    onReasoningDelta,
   });
 }
 

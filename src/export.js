@@ -20,6 +20,11 @@ export function buildExportMarkdown({
 
   for (const stage of stages) {
     lines.push(`## ${stage.name}`, '', String(stage.text || '').trim(), '');
+    const reasoning = String(stage.reasoning || '').trim();
+    if (reasoning) {
+      // 思考过程放在折叠块里，避免干扰正文阅读。
+      lines.push('<details><summary>思考过程</summary>', '', reasoning, '', '</details>', '');
+    }
   }
 
   lines.push('## 最终输出', '', String(final || '').trim(), '');

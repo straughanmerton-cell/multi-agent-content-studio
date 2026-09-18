@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | 使用方式 | 命令行 `python xxx.py` | 打开网址即用，手机也能用 |
 | 运行环境 | 需要 Python + pip 依赖 | 零依赖纯静态页，任意静态托管 |
-| 模型 | 硬编码 `gpt-4o` | 可切换 OpenAI / DeepSeek / Kimi / 智谱 / 百炼 / SiliconFlow / Ollama / 自定义 |
+| 模型 | 硬编码 `gpt-4o` | 默认 DeepSeek `deepseek-v4-flash`，可切换 OpenAI / Kimi / 智谱 / 百炼 / SiliconFlow / Ollama / 自定义 |
 | 输出方式 | 跑完才一次性打印 | 每个 Agent 的思考过程实时流式显示 |
 | 记忆 | 本地 `memory.json` | 浏览器 localStorage，可复用任务、查看和删除历史 |
 | 结果交付 | 终端文本 | Markdown 渲染 + 一键复制 + 导出 `.md` 文件 |
@@ -70,7 +70,7 @@ npx wrangler deploy
 
 - API 地址填这个 Worker 地址；
 - API Key 填 `ACCESS_TOKEN` 的值（用作访问口令）；
-- 模型名填上游服务商支持的模型，例如 `deepseek-chat`。
+- 模型名填上游服务商支持的模型，例如 `deepseek-v4-flash`。
 
 前端会直连 `POST <Worker 地址>/chat/completions`，Worker 换成服务端 Key 后转发，并把流式响应原样透传回浏览器。
 
@@ -90,7 +90,7 @@ npx wrangler deploy
 | 服务商 | Base URL | 默认模型 |
 | --- | --- | --- |
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-v4-flash` |
 | 月之暗面 Kimi | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
 | 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4-flash` |
 | 阿里云百炼 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
@@ -110,6 +110,16 @@ npx wrangler deploy
 | 5 | ✍️ Content 优化 | 初稿 + 审核意见 | 0.4 |
 
 通过审核后再降温度出终稿，是上游脚本里就有的设计（原代码在最后一步用了 `temperature=0.4`），网页版保持一致。终稿完成后自动写入历史记忆，下一次运行会作为「历史经验」带回第一步。
+
+### 推理模型（deepseek-v4-flash 等）
+
+默认服务商已预设为 DeepSeek + `deepseek-v4-flash`。这类推理模型在流式响应里会把思考过程放在 `delta.reasoning_content`，正式回答放在 `delta.content`。页面会把两者分开处理：
+
+- 思考过程进入每个阶段可折叠的「思考过程」区块，正文开始输出后自动收起；
+- 正文只渲染 `delta.content`，不会被思考内容污染；
+- 导出 Markdown 时思考过程以 `<details>` 形式附在对应阶段下。
+
+换成不支持 `reasoning_content` 的普通模型（如 `gpt-4o-mini`）时会自动跳过该区块，不影响流程。
 
 ## 目录结构
 
